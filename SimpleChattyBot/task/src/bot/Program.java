@@ -1,8 +1,11 @@
 package bot;
 
 import java.util.Scanner;
+import java.net.*;
+import java.io.*;
 
 public class Program {
+  /*
   public static void main(String[] args) {
     SimpleBot bot = new SimpleBot(
       "Alice", 
@@ -12,6 +15,78 @@ public class Program {
     );
     bot.run();
   }
+  */
+
+
+}
+
+public class Server {
+  private static final int TIMEOUT = 10000;
+  private ServerSocket server;
+  private SimpleBot bot;
+
+  public Server(int port) {
+    this.server = new ServerSocket(port);
+    this.server.setSoTimeout(TIMEOUT);
+
+    this.bot = new SimpleBot(
+      "Alice", 
+      "1998",
+      null,
+      null
+    );
+  }
+
+  public void run() {
+    while (true) {
+      try {
+        Socket client = this.server.accept();
+
+        this.bot.setInput(
+          new ServerInput(client)
+        ).setOutput(
+          new ServerOutput(client)
+        ).run();
+
+        client.close();
+      } catch (SocketTimeoutException e) {
+        System.out.println("Socket timeout");
+      } catch (IOException e) {
+        System.out.println("Invalid input");
+      }
+    }
+  }
+}
+
+public class ServerInput implements Input {
+  private DataInputStream input;
+
+  public ServerInput(Socket client) {
+    this.input = new DataInputStream(client.getInputStream());
+  }
+
+  public String nextLine() {
+    String line = this.input.readUTF();
+    return line;
+  }
+}
+
+public class ServerOutput implements Output {
+  private DataOutputStream output;
+
+  public ServerOutput(Socket client) {
+    this.output = new DataOutputStream(client.getOutputStream());
+  }
+
+  public void outLine(String message) {
+    this.output.writeUTF(message + "\n");
+  }
+
+  public void outFormat(String format, Object... args) {
+    this.output.writeUTF(
+      String.format(format, args)
+    );
+  }
 }
 
 public class ConsoleInput implements Input {
@@ -19,10 +94,6 @@ public class ConsoleInput implements Input {
 
   public String nextLine() {
     return this.scanner.nextLine();
-  };
-
-  public int nextInt() {
-    return this.scanner.nextInt();
   };
 }
 
@@ -38,7 +109,6 @@ public class ConsoleOutput implements Output {
 
 public interface Input {
   public String nextLine();
-  public int nextInt();
 }
 
 public interface Output {
@@ -156,5 +226,15 @@ public class SimpleBot {
         this.count();
         this.test();
         this.end();
+    }
+
+    public SimpleBot setInput(Input input) {
+      this.input = input;
+      return this;
+    }
+
+    public SimpleBot setOutput(Output output) {
+      this.output = output;
+      return this;
     }
 }
